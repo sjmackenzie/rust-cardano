@@ -11,7 +11,7 @@ use hdwallet::{self, DerivationScheme, XPrv, XPub};
 use input_selection;
 /// 2 Level of randomly chosen hard derivation indexes Wallet
 ///
-use std::{error, fmt, iter, ops::Deref};
+use std::{error, fmt, iter};
 use tx::{self, Tx, TxAux, TxId, TxInWitness};
 use txutils::{self, OutputPolicy};
 
@@ -85,7 +85,7 @@ impl Wallet {
     /// This function returns the addressing if the address belongs
     /// to this wallet, otherwise it returns `None`
     pub fn check_address(&self, address: &ExtendedAddr) -> Option<Addressing> {
-        let hdkey = hdpayload::HDKey::new(&self.root_key.public());
+        let hdkey = hdpayload::HDKey::new(&self.root_key.get_xprv().public());
 
         // This wallet has has only one account
         let account: &RootKey = scheme::Wallet::list_accounts(self);
@@ -208,12 +208,6 @@ impl Wallet {
         }
     }
 }
-impl Deref for Wallet {
-    type Target = RootKey;
-    fn deref(&self) -> &Self::Target {
-        &self.root_key
-    }
-}
 
 impl scheme::Wallet for Wallet {
     /// 2 Level of randomly chosen hard derivation indexes does not support Account model. Only one account: the root key.
@@ -244,6 +238,7 @@ impl scheme::Wallet for Wallet {
         for addressing in addresses {
             let key = self
                 .root_key
+                .get_xprv()
                 .derive(self.derivation_scheme, addressing.0)
                 .derive(self.derivation_scheme, addressing.1);
 
@@ -382,14 +377,12 @@ impl RootKey {
         self.root_key
     }
 
+    pub fn get_xprv(&self) -> &XPrv {
+        &self.root_key
+    }
+
     pub fn address_generator(&self) -> AddressGenerator<XPrv> {
         AddressGenerator::<XPrv>::new(self.root_key.clone(), self.derivation_scheme)
-    }
-}
-impl Deref for RootKey {
-    type Target = XPrv;
-    fn deref(&self) -> &Self::Target {
-        &self.root_key
     }
 }
 
