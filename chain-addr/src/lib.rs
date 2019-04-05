@@ -33,12 +33,17 @@ use chain_core::property::{self, Serialize as PropertySerialize};
 #[cfg(feature = "generic-serialization")]
 use serde::Serializer as SerdeSerializer;
 #[cfg(feature = "generic-serialization")]
-use serde_derive::Serialize;
+use serde_derive::{Deserialize, Serialize};
 
 // Allow to differentiate between address in
 // production and testing setting, so that
 // one type of address is not used in another setting.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[cfg_attr(
+    feature = "generic-serialization",
+    derive(Deserialize, Serialize),
+    serde(rename_all = "lowercase")
+)]
 pub enum Discrimination {
     Production,
     Test,
