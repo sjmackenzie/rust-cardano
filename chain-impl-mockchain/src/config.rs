@@ -1,7 +1,6 @@
 use crate::leadership::bft::LeaderId;
 use crate::milli::Milli;
 use crate::{block::ConsensusVersion, fee::LinearFee};
-use chain_addr::Discrimination;
 use chain_core::mempack::{ReadBuf, ReadError, Readable};
 use chain_core::packer::Codec;
 use chain_core::property;
@@ -45,7 +44,6 @@ impl Into<ReadError> for Error {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum ConfigParam {
     Block0Date(Block0Date),
-    Discrimination(Discrimination),
     ConsensusVersion(ConsensusVersion),
     SlotsPerEpoch(u32),
     SlotDuration(u8),
@@ -63,41 +61,38 @@ pub enum ConfigParam {
 // Discriminants can NEVER be 1024 or higher
 #[derive(AsRefStr, Clone, Copy, Debug, EnumIter, EnumString, FromPrimitive, PartialEq)]
 enum Tag {
-    #[strum(to_string = "discrimination")]
-    Discrimination = 1,
     #[strum(to_string = "block0-date")]
-    Block0Date = 2,
+    Block0Date = 1,
     #[strum(to_string = "block0-consensus")]
-    ConsensusVersion = 3,
+    ConsensusVersion = 2,
     #[strum(to_string = "slots-per-epoch")]
-    SlotsPerEpoch = 4,
+    SlotsPerEpoch = 3,
     #[strum(to_string = "slot-duration")]
-    SlotDuration = 5,
+    SlotDuration = 4,
     #[strum(to_string = "epoch-stability-depth")]
-    EpochStabilityDepth = 6,
+    EpochStabilityDepth = 5,
     #[strum(to_string = "genesis-praos-param-f")]
-    ConsensusGenesisPraosActiveSlotsCoeff = 8,
+    ConsensusGenesisPraosActiveSlotsCoeff = 6,
     #[strum(to_string = "max-number-of-transactions-per-block")]
-    MaxNumberOfTransactionsPerBlock = 9,
+    MaxNumberOfTransactionsPerBlock = 7,
     #[strum(to_string = "bft-slots-ratio")]
-    BftSlotsRatio = 10,
+    BftSlotsRatio = 8,
     #[strum(to_string = "add-bft-leader")]
-    AddBftLeader = 11,
+    AddBftLeader = 9,
     #[strum(to_string = "remove-bft-leader")]
-    RemoveBftLeader = 12,
+    RemoveBftLeader = 10,
     #[strum(to_string = "linear-fee")]
-    LinearFee = 14,
+    LinearFee = 11,
     #[strum(to_string = "proposal-expiration")]
-    ProposalExpiration = 15,
+    ProposalExpiration = 12,
     #[strum(to_string = "kes-update-speed")]
-    KESUpdateSpeed = 16,
+    KESUpdateSpeed = 13,
 }
 
 impl<'a> From<&'a ConfigParam> for Tag {
     fn from(config_param: &'a ConfigParam) -> Self {
         match config_param {
             ConfigParam::Block0Date(_) => Tag::Block0Date,
-            ConfigParam::Discrimination(_) => Tag::Discrimination,
             ConfigParam::ConsensusVersion(_) => Tag::ConsensusVersion,
             ConfigParam::SlotsPerEpoch(_) => Tag::SlotsPerEpoch,
             ConfigParam::SlotDuration(_) => Tag::SlotDuration,
@@ -122,9 +117,6 @@ impl Readable for ConfigParam {
         let bytes = buf.get_slice(taglen.get_len())?;
         match taglen.get_tag().map_err(Into::into)? {
             Tag::Block0Date => ConfigParamVariant::from_payload(bytes).map(ConfigParam::Block0Date),
-            Tag::Discrimination => {
-                ConfigParamVariant::from_payload(bytes).map(ConfigParam::Discrimination)
-            }
             Tag::ConsensusVersion => {
                 ConfigParamVariant::from_payload(bytes).map(ConfigParam::ConsensusVersion)
             }
@@ -169,7 +161,6 @@ impl property::Serialize for ConfigParam {
         let tag = Tag::from(self);
         let bytes = match self {
             ConfigParam::Block0Date(data) => data.to_payload(),
-            ConfigParam::Discrimination(data) => data.to_payload(),
             ConfigParam::ConsensusVersion(data) => data.to_payload(),
             ConfigParam::SlotsPerEpoch(data) => data.to_payload(),
             ConfigParam::SlotDuration(data) => data.to_payload(),
@@ -211,29 +202,6 @@ impl ConfigParamVariant for Block0Date {
 
     fn from_payload(payload: &[u8]) -> Result<Self, Error> {
         u64::from_payload(payload).map(Block0Date)
-    }
-}
-
-const VAL_PROD: u8 = 1;
-const VAL_TEST: u8 = 2;
-
-impl ConfigParamVariant for Discrimination {
-    fn to_payload(&self) -> Vec<u8> {
-        match self {
-            Discrimination::Production => vec![VAL_PROD],
-            Discrimination::Test => vec![VAL_TEST],
-        }
-    }
-
-    fn from_payload(payload: &[u8]) -> Result<Self, Error> {
-        if payload.len() != 1 {
-            return Err(Error::SizeInvalid);
-        };
-        match payload[0] {
-            VAL_PROD => Ok(Discrimination::Production),
-            VAL_TEST => Ok(Discrimination::Test),
-            _ => Err(Error::StructureInvalid),
-        }
     }
 }
 
@@ -412,7 +380,6 @@ mod test {
         fn arbitrary<G: Gen>(g: &mut G) -> Self {
             match u8::arbitrary(g) % 12 {
                 0 => ConfigParam::Block0Date(Arbitrary::arbitrary(g)),
-                1 => ConfigParam::Discrimination(Arbitrary::arbitrary(g)),
                 2 => ConfigParam::ConsensusVersion(Arbitrary::arbitrary(g)),
                 3 => ConfigParam::SlotsPerEpoch(Arbitrary::arbitrary(g)),
                 4 => ConfigParam::SlotDuration(Arbitrary::arbitrary(g)),

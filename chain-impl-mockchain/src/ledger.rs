@@ -12,7 +12,7 @@ use crate::stake::{DelegationError, DelegationState, StakeDistribution};
 use crate::transaction::*;
 use crate::value::*;
 use crate::{account, certificate, legacy, multisig, setting, stake, update, utxo};
-use chain_addr::{Address, Discrimination, Kind};
+use chain_addr::{Address, Kind};
 use chain_core::property::{self, ChainLength as _, Message as _};
 use chain_time::{Epoch, SlotDuration, TimeEra, TimeFrame, Timeline};
 use std::sync::Arc;
@@ -23,7 +23,6 @@ use std::time::{Duration, SystemTime};
 pub struct LedgerStaticParameters {
     pub block0_initial_hash: HeaderHash,
     pub block0_start_time: config::Block0Date,
-    pub discrimination: Discrimination,
     pub kes_update_speed: u32,
 }
 
@@ -64,7 +63,6 @@ custom_error! {
         InitialMessageMissing = "The initial message is missing.",
         InitialMessageMany = "Only one initial message is required",
         InitialMessageDuplicateBlock0Date = "Block0 Date is duplicated in the initial message",
-        InitialMessageDuplicateDiscrimination = "Address discrimination setting is duplicated in the initial fragment",
         InitialMessageDuplicateConsensusVersion = "Consensus version is duplicated in the initial fragment",
         InitialMessageDuplicateSlotDuration = "Slot Duration is duplicated in the initial fragment",
         InitialMessageDuplicateEpochStabilityDepth = "Epoch stability depth is duplicated in the initial fragment",
@@ -72,7 +70,6 @@ custom_error! {
         InitialMessageNoDate = "Missing block0 date in the initial fragment",
         InitialMessageNoSlotDuration = "Missing slot duration in the initial fragment",
         InitialMessageNoSlotsPerEpoch = "Missing slots per epoch in the initial fragment",
-        InitialMessageNoDiscrimination = "Missing address discrimination in the initial fragment",
         InitialMessageNoConsensusVersion = "Missing consensus version in the initial fragment",
         InitialMessageNoConsensusLeaderId = "Missing consensus leader id list in the initial fragment",
         InitialMessageNoPraosActiveSlotsCoeff = "Missing praos active slot coefficient in the initial fragment",
@@ -110,7 +107,6 @@ custom_error! {
         OutputGroupInvalid { output: Output<Address> } = "Output group invalid",
         Delegation { source: DelegationError } = "Error or Invalid delegation ",
         AccountIdentifierInvalid = "Invalid account identifier",
-        InvalidDiscrimination = "Invalid discrimination",
         ExpectingAccountWitness = "Expected an account witness",
         ExpectingUtxoWitness = "Expected a UTxO witness",
         ExpectingInitialMessage = "Expected an Initial Fragment",
@@ -153,7 +149,6 @@ impl Ledger {
         let mut regular_ents = crate::message::ConfigParams::new();
         let mut block0_start_time = None;
         let mut slot_duration = None;
-        let mut discrimination = None;
         let mut slots_per_epoch = None;
         let mut kes_update_speed = None;
 
@@ -161,9 +156,6 @@ impl Ledger {
             match param {
                 ConfigParam::Block0Date(d) => {
                     block0_start_time = Some(*d);
-                }
-                ConfigParam::Discrimination(d) => {
-                    discrimination = Some(*d);
                 }
                 ConfigParam::SlotDuration(d) => {
                     slot_duration = Some(*d);
@@ -182,9 +174,6 @@ impl Ledger {
         let block0_start_time = block0_start_time.ok_or(Error::Block0 {
             source: Block0Error::InitialMessageNoDate,
         })?;
-        let discrimination = discrimination.ok_or(Error::Block0 {
-            source: Block0Error::InitialMessageNoDiscrimination,
-        })?;
         let slot_duration = slot_duration.ok_or(Error::Block0 {
             source: Block0Error::InitialMessageNoSlotDuration,
         })?;
@@ -198,7 +187,6 @@ impl Ledger {
         let static_params = LedgerStaticParameters {
             block0_initial_hash,
             block0_start_time: block0_start_time,
-            discrimination: discrimination,
             kes_update_speed: kes_update_speed,
         };
 
@@ -669,9 +657,6 @@ fn internal_apply_transaction_output(
             });
         }
 
-        if output.address.discrimination() != static_params.discrimination {
-            return Err(Error::InvalidDiscrimination);
-        }
         match output.address.kind() {
             Kind::Single(_) => {
                 new_utxos.push((index as u8, output.clone()));

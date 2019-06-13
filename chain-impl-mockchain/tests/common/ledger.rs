@@ -1,4 +1,4 @@
-use chain_addr::{Address, Discrimination};
+use chain_addr::Address;
 use chain_crypto::*;
 use chain_impl_mockchain::block::ConsensusVersion;
 use chain_impl_mockchain::block::HeaderHash;
@@ -16,7 +16,6 @@ pub struct ConfigBuilder {
     slot_duration: u8,
     slots_per_epoch: u32,
     active_slots_coeff: Milli,
-    discrimination: Discrimination,
 }
 
 impl ConfigBuilder {
@@ -25,7 +24,6 @@ impl ConfigBuilder {
             slot_duration: 20,
             slots_per_epoch: 21600,
             active_slots_coeff: Milli::HALF,
-            discrimination: Discrimination::Test,
         }
     }
 
@@ -46,7 +44,6 @@ impl ConfigBuilder {
 
     pub fn build(&self) -> ConfigParams {
         let mut ie = ConfigParams::new();
-        ie.push(ConfigParam::Discrimination(self.discrimination));
         ie.push(ConfigParam::ConsensusVersion(ConsensusVersion::Bft));
 
         // TODO remove rng: make this creation deterministic

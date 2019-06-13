@@ -1,16 +1,6 @@
-use crate::{Address, AddressReadable, Discrimination, Kind, KindType};
+use crate::{Address, AddressReadable, Kind, KindType};
 use chain_crypto::{Ed25519, KeyPair, PublicKey};
 use quickcheck::{Arbitrary, Gen};
-
-impl Arbitrary for Discrimination {
-    fn arbitrary<G: Gen>(g: &mut G) -> Self {
-        match u8::arbitrary(g) % 2 {
-            0 => Discrimination::Production,
-            1 => Discrimination::Test,
-            _ => unreachable!(),
-        }
-    }
-}
 
 impl Arbitrary for KindType {
     fn arbitrary<G: Gen>(g: &mut G) -> Self {
@@ -45,7 +35,6 @@ fn arbitrary_32bytes<G: Gen>(g: &mut G) -> [u8; 32] {
 
 impl Arbitrary for Address {
     fn arbitrary<G: Gen>(g: &mut G) -> Self {
-        let discrimination = Arbitrary::arbitrary(g);
         let kind = match KindType::arbitrary(g) {
             KindType::Single => Kind::Single(arbitrary_public_key(g)),
             KindType::Group => Kind::Group(arbitrary_public_key(g), arbitrary_public_key(g)),
@@ -55,6 +44,6 @@ impl Arbitrary for Address {
                 Kind::Multisig(h)
             }
         };
-        Address(discrimination, kind)
+        Address(kind)
     }
 }

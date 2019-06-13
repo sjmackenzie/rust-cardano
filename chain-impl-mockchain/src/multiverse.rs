@@ -265,7 +265,6 @@ mod test {
     use crate::ledger::Ledger;
     use crate::message::{ConfigParams, Message};
     use crate::milli::Milli;
-    use chain_addr::Discrimination;
     use chain_core::property::{Block as _, ChainLength as _, HasMessages as _};
     use chain_crypto::{Ed25519, SecretKey};
     use chain_storage::store::BlockStore;
@@ -307,7 +306,6 @@ mod test {
 
         let mut genesis_block = BlockBuilder::new();
         let mut ents = ConfigParams::new();
-        ents.push(ConfigParam::Discrimination(Discrimination::Test));
         ents.push(ConfigParam::ConsensusVersion(ConsensusVersion::Bft));
         let leader_pub_key = random_sk.to_public();
         ents.push(ConfigParam::AddBftLeader(LeaderId::from(leader_pub_key)));
